@@ -1,0 +1,40 @@
+# .github/workflows/sam-deploy.yml
+name: SAM Deploy (use samconfig)
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ap-northeast-3         # 這裡作為 runner 環境
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup SAM CLI
+        uses: aws-actions/setup-sam@v2
+
+      # 這三步都會讀 samconfig.toml 的 default 區塊
+      - name: SAM build
+        run: sam build --config-env default
+
+      - name: SAM validate
+        run: sam validate --config-env default
+
+      - name: SAM deploy
+        run: sam deploy --config-env default

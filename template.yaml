@@ -1,0 +1,105 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  GoogleDriveFileSharly
+
+  Sample SAM Template for GoogleDriveFileSharly
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 240
+
+Resources:
+  ShareFileFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: lambda_functions/file_sharly
+      Handler: app.lambda_handler
+      Runtime: python3.10
+      Architectures:
+        - arm64
+      MemorySize: 2048
+      Timeout: 25
+      EphemeralStorage:
+        Size: 512
+      EventInvokeConfig:
+        MaximumEventAgeInSeconds: 600
+        MaximumRetryAttempts: 1
+  CommandRouterFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda_functions/command_router
+      Handler: app.lambda_handler
+      Runtime: python3.10
+      Architectures:
+        - arm64
+      MemorySize: 256
+      Timeout: 20
+      EphemeralStorage:
+        Size: 512
+  ManageDBFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda_functions/database_manager
+      Handler: app.lambda_handler
+      Runtime: python3.10
+      Architectures:
+        - arm64
+      MemorySize: 256
+      Timeout: 10
+      EphemeralStorage:
+        Size: 512
+      EventInvokeConfig:
+        MaximumEventAgeInSeconds: 600
+        MaximumRetryAttempts: 0
+  LIFFServiceGetDBFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda_functions/liff_service_database_getter
+      Handler: app.lambda_handler
+      Runtime: python3.10
+      Architectures:
+        - arm64
+      MemorySize: 256
+      Timeout: 10
+      EphemeralStorage:
+        Size: 512
+  StudentStatusVisualizationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda_functions/student_status_visualizer
+      Handler: app.lambda_handler
+      Runtime: python3.10
+      Architectures:
+        - arm64
+      MemorySize: 512
+      Timeout: 20
+      EphemeralStorage:
+        Size: 512
+  GetLambdaResponseFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda_functions/lambda_response_getter
+      Handler: app.lambda_handler
+      Runtime: python3.10
+      Architectures:
+        - arm64
+      MemorySize: 256
+      Timeout: 10
+      EphemeralStorage:
+        Size: 512
+
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  # ShareFileApi:
+  #   Description: "API Gateway endpoint URL for Prod stage for Share File function"
+  #   Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
+  ShareFileFunction:
+    Description: "Share File Lambda Function ARN"
+    Value: !GetAtt ShareFileFunction.Arn
+  ShareFileFunctionIamRole:
+    Description: "Implicit IAM Role created for Share File function"
+    Value: !GetAtt ShareFileFunctionRole.Arn

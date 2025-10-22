@@ -29,6 +29,10 @@ jobs:
       - name: Setup SAM CLI
         uses: aws-actions/setup-sam@v2
 
+      - name: Enable arm64 emulation
+        run: |
+          docker run --rm --privileged tonistiigi/binfmt --install arm64
+
       # 這三步都會讀 samconfig.toml 的 default 區塊
       - name: SAM build
         run: sam build --config-env default

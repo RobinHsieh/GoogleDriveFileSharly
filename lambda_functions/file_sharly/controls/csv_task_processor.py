@@ -139,7 +139,7 @@ class CSVTaskProcessor:
             \n\
             補課時遇到的疑難雜症，請參考說明文件：\n\
             https://docs.google.com/document/d/1pAbfLjswXgXTccd1oGM8vDrzm_TP-_Ty/edit\n\
-            助教聯絡方式：\n\
+            助教（負責管理雲端）聯絡方式：\n\
             Email: hectopascal.citrus@gmail.com"
 
         return email_message

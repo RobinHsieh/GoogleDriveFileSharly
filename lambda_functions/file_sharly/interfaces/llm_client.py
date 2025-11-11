@@ -63,7 +63,7 @@ class ReasonReviewBot:
         """.strip()
 
         response = self.client.models.generate_content(
-            model="gemini-2.0-flash",  # 如有需要可根據實際情況修改模型名稱
+            model="gemini-2.5-flash",  # 如有需要可根據實際情況修改模型名稱
             contents=prompt,
             config={
                 "temperature": 0.05,

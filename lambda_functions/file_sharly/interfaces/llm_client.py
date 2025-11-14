@@ -4,8 +4,14 @@ from schemas.llm_schema import Decision, ReviewResult, ReviewResultForGeminiAPI
 
 
 class ReasonReviewBot:
+    """
+    ReasonReviewBot is a Thread-safe class,
+    but genai.Client is a Non Thread-safe class.
+
+    So create a new genai.Client whenever call review_makeup_reason().
+    """
     def __init__(self, api_key: str):
-        self.client = genai.Client(api_key=api_key)
+        self.api_key = api_key
 
     """
     補課申請審核機器人，目的是防止學員濫用補課申請。
@@ -19,6 +25,9 @@ class ReasonReviewBot:
     """
 
     def review_makeup_reason(self, reason: str) -> ReviewResult:
+
+        client = genai.Client(api_key=self.api_key)
+
         prompt = f"""
 你是一個補課申請審核機器人，目的是防止學員濫用補課申請，因此第二次申請補課的學員必須填寫「補課理由」。你需要從使用者提供的文字中，提取出真實敘述補課原因的部分，並忽略與請求、道歉或其他非原因敘述的語句。接著，根據下列評分標準對該理由進行分項打分，並計算出最終的 total_score，再依據此分數決定審核結果。
 
@@ -62,7 +71,7 @@ class ReasonReviewBot:
 學生補課理由：{reason}
         """.strip()
 
-        response = self.client.models.generate_content(
+        response = client.models.generate_content(
             model="gemini-2.5-flash",  # 如有需要可根據實際情況修改模型名稱
             contents=prompt,
             config={

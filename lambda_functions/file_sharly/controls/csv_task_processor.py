@@ -261,7 +261,7 @@ class CSVTaskProcessor:
             user_state,
         )
 
-        print(f"user_state.offset: {getattr(user_state, 'offset', 'NOT SET')} in row: {row}")  # debug Log
+        # print(f"user_state.offset: {getattr(user_state, 'offset', 'NOT SET')} in row: {row}")  # debug Log
 
 
         """

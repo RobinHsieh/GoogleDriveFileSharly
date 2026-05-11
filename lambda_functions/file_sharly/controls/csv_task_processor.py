@@ -8,6 +8,8 @@ from pandas import isna, DataFrame
 from datetime import datetime, timezone, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from google.genai import errors as genai_errors
+
 from interfaces.google_drive_client import GoogleDriveClient
 from interfaces.google_sheet_client import GoogleSheetClient
 from controls.property_and_state_manager import (
@@ -254,12 +256,21 @@ class CSVTaskProcessor:
         """
         user_state = UserState()
 
-        user_state = self._process_user_cells(
+        process_result = self._process_user_cells(
             row,
             column_size,
             google_oauth_token,
             user_state,
         )
+        """
+        If _process_user_cells encountered an error (e.g. LLM API ServerError /
+        course date mismatch), it returns a Response instead of a UserState.
+        Propagate the Response upward so share_file_with_notifications can
+        short-circuit and report it through the existing error channel.
+        """
+        if isinstance(process_result, Response):
+            return process_result
+        user_state = process_result
 
         # print(f"user_state.offset: {getattr(user_state, 'offset', 'NOT SET')} in row: {row}")  # debug Log
 
@@ -346,9 +357,13 @@ class CSVTaskProcessor:
 
     def _process_user_cells(
         self, row: int, column_size: int, google_oauth_token, user_state: UserState
-    ) -> UserState:
+    ) -> UserState | Response:
         """
         Process each CellState in the row through parallel processing and return the updated UserState.
+
+        Returns Response(status="error", ...) when an unrecoverable error is
+        detected (currently: course date / course name mismatch, or LLM API
+        failures from review_reason_in_cell).
         """
         column_date_start_from = 5
         future_list = []
@@ -415,11 +430,42 @@ class CSVTaskProcessor:
                     cell_state.if_view_limit_near
                     and user_state.review_result.explanation == "尚未初始化。"
                 ):
-                    user_state.review_result = (
-                        self.property_and_state_manager.review_reason_in_cell(
-                            row, self.data_frame
+                    try:
+                        user_state.review_result = (
+                            self.property_and_state_manager.review_reason_in_cell(
+                                row, self.data_frame
+                            )
                         )
-                    )
+                    except genai_errors.APIError as e:
+                        """
+                        Catches the Gemini API failure (e.g. 503 UNAVAILABLE
+                        "high demand", 429 RESOURCE_EXHAUSTED, 5xx ServerError,
+                        4xx ClientError, etc.) raised from
+                        ReviewReasonByLLM.review_reason_in_cell ->
+                        ReasonReviewBot.review_makeup_reason ->
+                        google.genai client.models.generate_content().
+
+                        Without this catch, the exception propagates up through
+                        future.result() and kills the whole batch thread.
+                        We surface it through the existing Response schema so
+                        share_file_with_notifications can short-circuit and the
+                        caller can persist the error log to DynamoDB.
+                        """
+                        logger.error(
+                            "LLM API error at row %s: %s - %s (code=%s)",
+                            row,
+                            type(e).__name__,
+                            getattr(e, "message", str(e)),
+                            getattr(e, "code", "unknown"),
+                        )
+                        return Response(
+                            status="error",
+                            error_type=(
+                                f"LLM API error when reviewing reason at row {row}: "
+                                f"{type(e).__name__} code={getattr(e, 'code', 'unknown')} "
+                                f"message={getattr(e, 'message', str(e))}"
+                            ),
+                        )
 
                 """
                 get the new user state

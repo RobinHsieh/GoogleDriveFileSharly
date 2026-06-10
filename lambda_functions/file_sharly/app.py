@@ -112,7 +112,7 @@ def lambda_handler(event, context):
                 batch_number,
                 week_day,
                 response.model_dump(),
-                int((datetime.now(timezone.utc) + timedelta(hours=18)).timestamp()),
+                int((datetime.now(timezone.utc) + timedelta(hours=23)).timestamp()),
             )
 
         logger.info(
